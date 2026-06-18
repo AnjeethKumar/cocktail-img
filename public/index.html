@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cocktail API</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --card: #1e1e1e;
+      --border: #2a2a2a;
+      --accent: #f5a623;
+      --accent2: #e8651a;
+      --text: #f0f0f0;
+      --muted: #888;
+      --danger: #e05252;
+      --success: #4caf50;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-brand span { font-size: 1.4rem; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    #userGreeting { color: var(--muted); font-size: 0.85rem; }
+    .btn-sm {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .btn-sm:hover { opacity: 0.85; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-accent { background: var(--accent); color: #000; }
+    .btn-danger { background: var(--danger); color: #fff; }
+
+    /* PAGES */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* AUTH PAGE */
+    .auth-wrapper {
+      min-height: calc(100vh - 60px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .auth-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .auth-tabs { display: flex; gap: 0; margin-bottom: 28px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      background: var(--surface);
+      color: var(--muted);
+      border: none;
+      transition: all 0.2s;
+    }
+    .auth-tab.active { background: var(--accent); color: #000; }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+    .auth-form h2 { font-size: 1.3rem; margin-bottom: 6px; }
+    .auth-form p { color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+
+    /* FORM ELEMENTS */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+      border-color: var(--accent);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .btn-full {
+      width: 100%;
+      padding: 11px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #000;
+      transition: opacity 0.2s;
+      margin-top: 4px;
+    }
+    .btn-full:hover { opacity: 0.88; }
+    .btn-full:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* TOAST */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      max-width: 320px;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    #toast.show { display: block; animation: slideUp 0.25s ease; }
+    #toast.success { border-left: 3px solid var(--success); }
+    #toast.error { border-left: 3px solid var(--danger); }
+    @keyframes slideUp {
+      from { transform: translateY(12px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    /* DASHBOARD */
+    .dash-wrapper { padding: 28px 24px; max-width: 1200px; margin: 0 auto; }
+    .dash-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .dash-header h1 { font-size: 1.5rem; }
+    .dash-header p { color: var(--muted); font-size: 0.85rem; margin-top: 3px; }
+    .btn-add {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-add:hover { opacity: 0.88; }
+
+    /* SEARCH */
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .search-bar input {
+      flex: 1;
+      min-width: 200px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+    .search-bar select {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.88rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* GRID */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .cocktail-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .cocktail-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+    .card-img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: var(--surface);
+      display: block;
+    }
+    .card-img-placeholder {
+      width: 100%;
+      height: 180px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+    .card-body { padding: 14px; }
+    .card-body h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .card-badge {
+      display: inline-block;
+      background: rgba(245,166,35,0.15);
+      color: var(--accent);
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .card-ingr { color: var(--muted); font-size: 0.8rem; line-height: 1.5; margin-bottom: 12px; }
+    .card-actions { display: flex; gap: 8px; }
+    .btn-icon {
+      flex: 1;
+      padding: 7px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .btn-icon:hover { background: var(--surface); }
+    .btn-icon.del:hover { background: rgba(224,82,82,0.15); color: var(--danger); border-color: var(--danger); }
+    .btn-icon.edit:hover { background: rgba(245,166,35,0.15); color: var(--accent); border-color: var(--accent); }
+
+    .empty-state {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 3.5rem; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 1.1rem; margin-bottom: 6px; color: var(--text); }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      backdrop-filter: blur(3px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 28px;
+      animation: scaleIn 0.2s ease;
+    }
+    @keyframes scaleIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+    .modal-header h2 { font-size: 1.15rem; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.2s;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    /* DETAIL MODAL */
+    .detail-img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 18px;
+    }
+    .detail-section { margin-bottom: 14px; }
+    .detail-section label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 5px; }
+    .detail-section p { font-size: 0.9rem; line-height: 1.6; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+
+    /* FILE INPUT */
+    .file-input-wrap {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      position: relative;
+    }
+    .file-input-wrap:hover, .file-input-wrap.dragover { border-color: var(--accent); }
+    .file-input-wrap input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .file-input-wrap .fi-icon { font-size: 1.8rem; margin-bottom: 6px; }
+    .file-input-wrap p { color: var(--muted); font-size: 0.82rem; }
+    .file-input-wrap .fi-name { color: var(--accent); font-size: 0.85rem; margin-top: 4px; font-weight: 600; }
+
+    /* SPINNER */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+      .dash-wrapper { padding: 16px; }
+      .modal { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand"><span>🍹</span> Cocktail App</div>
+  <div class="nav-right">
+    <span id="userGreeting"></span>
+    <button class="btn-sm btn-outline" id="navLogout" style="display:none" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ==================== AUTH PAGE ==================== -->
+<div class="page active" id="authPage">
+  <div class="auth-wrapper">
+    <div class="auth-box">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchTab('login')">Login</button>
+        <button class="auth-tab" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div class="auth-form active" id="loginForm">
+        <h2>Welcome back</h2>
+        <p>Sign in to manage your cocktails</p>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" />
+        </div>
+        <button class="btn-full" id="loginBtn" onclick="doLogin()">Sign In</button>
+      </div>
+
+      <!-- REGISTER -->
+      <div class="auth-form" id="registerForm">
+        <h2>Create account</h2>
+        <p>Join to start adding cocktails</p>
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="regName" placeholder="Your name" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="regEmail" placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="regPassword" placeholder="••••••••" />
+        </div>
+        <button class="btn-full" id="registerBtn" onclick="doRegister()">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DASHBOARD PAGE ==================== -->
+<div class="page" id="dashPage">
+  <div class="dash-wrapper">
+    <div class="dash-header">
+      <div>
+        <h1>My Cocktails</h1>
+        <p id="cocktailCount">Loading...</p>
+      </div>
+      <button class="btn-add" onclick="openAddModal()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add Cocktail
+      </button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search by name or ingredient..." oninput="filterCocktails()" />
+      <select id="categoryFilter" onchange="filterCocktails()">
+        <option value="">All Categories</option>
+        <option>Classic</option>
+        <option>Tropical</option>
+        <option>Sour</option>
+        <option>Sweet</option>
+        <option>Frozen</option>
+        <option>Non-Alcoholic</option>
+        <option>Shooter</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div class="grid" id="cocktailGrid">
+      <div class="empty-state">
+        <div class="icon">🍸</div>
+        <h3>Loading cocktails...</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ADD / EDIT MODAL ==================== -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="formModalTitle">Add Cocktail</h2>
+      <button class="modal-close" onclick="closeModal('formModal')">✕</button>
+    </div>
+
+    <input type="hidden" id="editId" />
+
+    <div class="form-group">
+      <label>Cocktail Name</label>
+      <input type="text" id="fName" placeholder="e.g. Mojito" />
+    </div>
+    <div class="form-group">
+      <label>Ingredients <span style="color:var(--muted);font-weight:400">(comma-separated)</span></label>
+      <input type="text" id="fIngredients" placeholder="e.g. Rum, Lime Juice, Mint, Sugar" />
+    </div>
+    <div class="form-group">
+      <label>Instructions</label>
+      <textarea id="fInstructions" placeholder="Describe how to make this cocktail..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="fCategory">
+        <option value="">Select category</option>
+        <option>Classic</option>
+        <option>Tropical</option>
+        <option>Sour</option>
+        <option>Sweet</option>
+        <option>Frozen</option>
+        <option>Non-Alcoholic</option>
+        <option>Shooter</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group" id="imageGroup">
+      <label>Image</label>
+      <div class="file-input-wrap" id="fileWrap">
+        <input type="file" id="fImage" accept="image/jpg,image/jpeg,image/png" onchange="updateFileName(this)" />
+        <div class="fi-icon">📷</div>
+        <p>Click or drag to upload</p>
+        <p style="font-size:0.74rem;color:var(--muted);margin-top:2px">JPG, JPEG, PNG</p>
+        <div class="fi-name" id="fImageName"></div>
+      </div>
+    </div>
+
+    <button class="btn-full" id="formSubmitBtn" onclick="submitForm()">Add Cocktail</button>
+  </div>
+</div>
+
+<!-- ==================== DETAIL MODAL ==================== -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="detailName">Cocktail</h2>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <img id="detailImg" class="detail-img" src="" alt="" style="display:none" />
+    <div id="detailImgPlaceholder" style="font-size:4rem;text-align:center;margin-bottom:18px;display:none">🍹</div>
+    <div class="detail-section">
+      <label>Category</label>
+      <span class="card-badge" id="detailCategory"></span>
+    </div>
+    <div class="detail-section">
+      <label>Ingredients</label>
+      <div class="tag-list" id="detailIngredients"></div>
+    </div>
+    <div class="detail-section">
+      <label>Instructions</label>
+      <p id="detailInstructions"></p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DELETE CONFIRM MODAL ==================== -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h2>Delete Cocktail</h2>
+      <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+    </div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:22px">
+      Are you sure you want to delete <strong id="deleteModalName" style="color:var(--text)"></strong>? This cannot be undone.
+    </p>
+    <div style="display:flex;gap:10px">
+      <button class="btn-full" style="background:var(--surface);color:var(--text);border:1px solid var(--border)" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn-full" style="background:var(--danger)" id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = '/api';
+  let token = localStorage.getItem('token') || null;
+  let userName = localStorage.getItem('userName') || '';
+  let allCocktails = [];
+  let deleteTargetId = null;
+
+  // ── INIT ──────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    if (token) showDash();
+    else showPage('authPage');
+  });
+
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function showDash() {
+    showPage('dashPage');
+    document.getElementById('navLogout').style.display = 'inline-block';
+    document.getElementById('userGreeting').textContent = `👋 ${userName}`;
+    loadCocktails();
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────────────
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.className = '', 3200);
+  }
+
+  // ── AUTH TABS ─────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach((t, i) => {
+      t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+    });
+    document.getElementById('loginForm').classList.toggle('active', tab === 'login');
+    document.getElementById('registerForm').classList.toggle('active', tab === 'register');
+  }
+
+  // ── REGISTER ─────────────────────────────────────────────────────
+  async function doRegister() {
+    const name     = document.getElementById('regName').value.trim();
+    const email    = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    if (!name || !email || !password) return toast('Please fill in all fields', 'error');
+
+    const btn = document.getElementById('registerBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Creating...';
+
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      toast('Account created! Please sign in.');
+      switchTab('login');
+      document.getElementById('loginEmail').value = email;
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
+  }
+
+  // ── LOGIN ─────────────────────────────────────────────────────────
+  async function doLogin() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) return toast('Please fill in all fields', 'error');
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Signing in...';
+
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      token = data.token;
+      // Decode name from token payload
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userName = payload.name || email.split('@')[0];
+      } catch { userName = email.split('@')[0]; }
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('userName', userName);
+      toast('Welcome back!');
+      showDash();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  }
+
+  // ── LOGOUT ────────────────────────────────────────────────────────
+  function logout() {
+    token = null; userName = '';
+    localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    document.getElementById('navLogout').style.display = 'none';
+    document.getElementById('userGreeting').textContent = '';
+    allCocktails = [];
+    showPage('authPage');
+    toast('Logged out.');
+  }
+</script>
+
+<script>
+  // ── AUTH HELPER ───────────────────────────────────────────────────
+  function authHeaders() {
+    return { 'Authorization': `Bearer ${token}` };
+  }
+
+  // ── LOAD COCKTAILS ────────────────────────────────────────────────
+  async function loadCocktails() {
+    try {
+      const res = await fetch(`${API}/get/cocktails`, { headers: authHeaders() });
+      if (res.status === 401) { logout(); return; }
+      const data = await res.json();
+      allCocktails = data.cocktails || [];
+      renderGrid(allCocktails);
+    } catch(e) {
+      toast('Failed to load cocktails', 'error');
+    }
+  }
+
+  function renderGrid(list) {
+    const count = document.getElementById('cocktailCount');
+    count.textContent = `${list.length} cocktail${list.length !== 1 ? 's' : ''}`;
+    const grid = document.getElementById('cocktailGrid');
+    if (!list.length) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🍸</div>
+          <h3>No cocktails yet</h3>
+          <p>Click "Add Cocktail" to create your first recipe.</p>
+        </div>`;
+      return;
+    }
+    grid.innerHTML = list.map(c => `
+      <div class="cocktail-card" onclick="openDetail('${c._id}')">
+        ${c.image
+          ? `<img class="card-img" src="${c.image}" alt="${esc(c.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="card-img-placeholder" style="display:none">🍹</div>`
+          : `<div class="card-img-placeholder">🍹</div>`}
+        <div class="card-body">
+          <div class="card-badge">${esc(c.category || 'Uncategorized')}</div>
+          <h3>${esc(c.name || 'Unnamed')}</h3>
+          <p class="card-ingr">${(c.ingredients || []).slice(0,4).map(esc).join(', ')}${c.ingredients && c.ingredients.length > 4 ? ` +${c.ingredients.length - 4} more` : ''}</p>
+          <div class="card-actions" onclick="event.stopPropagation()">
+            <button class="btn-icon edit" onclick="openEditModal('${c._id}')">✏️ Edit</button>
+            <button class="btn-icon del" onclick="openDeleteModal('${c._id}','${esc(c.name)}')">🗑️ Delete</button>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── FILTER ────────────────────────────────────────────────────────
+  function filterCocktails() {
+    const q   = document.getElementById('searchInput').value.toLowerCase();
+    const cat = document.getElementById('categoryFilter').value.toLowerCase();
+    const filtered = allCocktails.filter(c => {
+      const matchName = (c.name || '').toLowerCase().includes(q);
+      const matchIngr = (c.ingredients || []).some(i => i.toLowerCase().includes(q));
+      const matchCat  = !cat || (c.category || '').toLowerCase() === cat;
+      return (matchName || matchIngr) && matchCat;
+    });
+    renderGrid(filtered);
+  }
+
+  // ── ADD MODAL ─────────────────────────────────────────────────────
+  function openAddModal() {
+    document.getElementById('formModalTitle').textContent = 'Add Cocktail';
+    document.getElementById('formSubmitBtn').textContent = 'Add Cocktail';
+    document.getElementById('editId').value = '';
+    document.getElementById('fName').value = '';
+    document.getElementById('fIngredients').value = '';
+    document.getElementById('fInstructions').value = '';
+    document.getElementById('fCategory').value = '';
+    document.getElementById('fImage').value = '';
+    document.getElementById('fImageName').textContent = '';
+    document.getElementById('imageGroup').style.display = 'block';
+    openModal('formModal');
+  }
+
+  // ── EDIT MODAL ────────────────────────────────────────────────────
+  async function openEditModal(id) {
+    try {
+      const res = await fetch(`${API}/get/cocktails/${id}`, { headers: authHeaders() });
+      const data = await res.json();
+      const c = data.cocktail;
+      document.getElementById('formModalTitle').textContent = 'Edit Cocktail';
+      document.getElementById('formSubmitBtn').textContent = 'Save Changes';
+      document.getElementById('editId').value = id;
+      document.getElementById('fName').value = c.name || '';
+      document.getElementById('fIngredients').value = (c.ingredients || []).join(', ');
+      document.getElementById('fInstructions').value = c.instructions || '';
+      document.getElementById('fCategory').value = c.category || '';
+      document.getElementById('fImage').value = '';
+      document.getElementById('fImageName').textContent = c.image ? 'Current image kept (upload to replace)' : '';
+      document.getElementById('imageGroup').style.display = 'block';
+      openModal('formModal');
+    } catch(e) {
+      toast('Failed to load cocktail', 'error');
+    }
+  }
+
+  // ── SUBMIT FORM ───────────────────────────────────────────────────
+  async function submitForm() {
+    const id           = document.getElementById('editId').value;
+    const name         = document.getElementById('fName').value.trim();
+    const ingredients  = document.getElementById('fIngredients').value.trim();
+    const instructions = document.getElementById('fInstructions').value.trim();
+    const category     = document.getElementById('fCategory').value;
+    const imageFile    = document.getElementById('fImage').files[0];
+
+    if (!name || !ingredients || !instructions) return toast('Name, ingredients and instructions are required', 'error');
+    if (!id && !imageFile) return toast('Please select an image', 'error');
+
+    const btn = document.getElementById('formSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> ${id ? 'Saving...' : 'Adding...'}`;
+
+    try {
+      let res;
+      if (id) {
+        // Update — use JSON (no image change) or multipart if image changed
+        if (imageFile) {
+          const fd = new FormData();
+          fd.append('name', name);
+          fd.append('ingredients', ingredients);
+          fd.append('instructions', instructions);
+          fd.append('category', category);
+          fd.append('image', imageFile);
+          res = await fetch(`${API}/update/cocktails/${id}`, {
+            method: 'PUT', headers: authHeaders(), body: fd
+          });
+        } else {
+          res = await fetch(`${API}/update/cocktails/${id}`, {
+            method: 'PUT',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, ingredients: ingredients.split(',').map(s=>s.trim()), instructions, category })
+          });
+        }
+      } else {
+        const fd = new FormData();
+        fd.append('name', name);
+        fd.append('ingredients', ingredients);
+        fd.append('instructions', instructions);
+        fd.append('category', category);
+        fd.append('image', imageFile);
+        res = await fetch(`${API}/add/cocktails`, {
+          method: 'POST', headers: authHeaders(), body: fd
+        });
+      }
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      toast(id ? 'Cocktail updated!' : 'Cocktail added!');
+      closeModal('formModal');
+      loadCocktails();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = id ? 'Save Changes' : 'Add Cocktail';
+    }
+  }
+
+  // ── DETAIL ────────────────────────────────────────────────────────
+  async function openDetail(id) {
+    try {
+      const res = await fetch(`${API}/get/cocktails/${id}`, { headers: authHeaders() });
+      const data = await res.json();
+      const c = data.cocktail;
+      document.getElementById('detailName').textContent = c.name || 'Cocktail';
+      document.getElementById('detailCategory').textContent = c.category || 'Uncategorized';
+      document.getElementById('detailInstructions').textContent = c.instructions || '—';
+      const ingrEl = document.getElementById('detailIngredients');
+      ingrEl.innerHTML = (c.ingredients || []).map(i => `<span class="tag">${esc(i)}</span>`).join('');
+      const img = document.getElementById('detailImg');
+      const ph  = document.getElementById('detailImgPlaceholder');
+      if (c.image) {
+        img.src = c.image; img.style.display = 'block'; ph.style.display = 'none';
+      } else {
+        img.style.display = 'none'; ph.style.display = 'block';
+      }
+      openModal('detailModal');
+    } catch(e) {
+      toast('Could not load details', 'error');
+    }
+  }
+
+  // ── DELETE ────────────────────────────────────────────────────────
+  function openDeleteModal(id, name) {
+    deleteTargetId = id;
+    document.getElementById('deleteModalName').textContent = name;
+    openModal('deleteModal');
+  }
+
+  async function confirmDelete() {
+    if (!deleteTargetId) return;
+    const btn = document.getElementById('confirmDeleteBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Deleting...';
+    try {
+      const res = await fetch(`${API}/delete/cocktails/${deleteTargetId}`, {
+        method: 'DELETE', headers: authHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      toast('Cocktail deleted.');
+      closeModal('deleteModal');
+      loadCocktails();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Delete';
+      deleteTargetId = null;
+    }
+  }
+
+  // ── MODAL HELPERS ─────────────────────────────────────────────────
+  function openModal(id)  { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  // Close on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+  });
+
+  // ── FILE INPUT LABEL ──────────────────────────────────────────────
+  function updateFileName(input) {
+    const name = input.files[0] ? input.files[0].name : '';
+    document.getElementById('fImageName').textContent = name;
+  }
+
+  // Enter key in auth
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const lf = document.getElementById('loginForm');
+      const rf = document.getElementById('registerForm');
+      if (lf.classList.contains('active')) doLogin();
+      else if (rf.classList.contains('active')) doRegister();
+    }
+  });
+</script>
+</body>
+</html>
